@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cổng Điểm Danh Điện Tử - THPT Bình Thạnh Đông</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f1f5f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 14px; }
+    .card { background: #ffffff; width: 100%; max-width: 410px; padding: 22px; border-radius: 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.08); text-align: center; }
+    .tag { display: inline-block; background-color: #e0e7ff; color: #3730a3; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+    h2 { color: #1e3a8a; font-size: 19px; margin-bottom: 2px; }
+    p.sub { color: #64748b; font-size: 13px; margin-bottom: 12px; }
+
+    /* Thẻ định danh học sinh cho lần 2 trở đi */
+    .profile-badge { display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px; margin-bottom: 12px; text-align: left; }
+    .profile-badge .p-name { font-size: 15px; font-weight: 700; color: #166534; }
+    .profile-badge .p-detail { font-size: 12.5px; color: #475569; margin-top: 3px; }
+    .btn-reset-info { font-size: 11px; color: #dc2626; text-decoration: underline; background: none; border: none; cursor: pointer; float: right; padding: 0; }
+
+    .field { text-align: left; margin-bottom: 10px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px; }
+    input[type="text"], input[type="tel"] { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; background: #fff; }
+    input:focus { border-color: #2563eb; }
+
+    /* Khung Camera & Ảnh Chụp */
+    .cam-box { position: relative; width: 100%; height: 210px; border-radius: 10px; overflow: hidden; background: #0f172a; border: 2px solid #3b82f6; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; }
+    video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    #capturedPhoto { width: 100%; height: 100%; object-fit: cover; display: none; }
+    canvas { display: none; }
+
+    .cam-ctrl { display: flex; gap: 8px; margin-bottom: 12px; }
+    .btn-cam-action { flex: 1; padding: 10px; font-size: 13px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; }
+    .btn-snap { background-color: #0284c7; color: #ffffff; }
+    .btn-retake { background-color: #64748b; color: #ffffff; display: none; }
+
+    .btn-submit { width: 100%; padding: 13px; background-color: #2563eb; color: #ffffff; font-size: 15px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; }
+    .btn-submit:disabled { background-color: #94a3b8; cursor: not-allowed; }
+
+    /* Hộp thống kê chuyên cần theo tuần */
+    .stat-box { display: flex; gap: 8px; margin-top: 10px; }
+    .stat-item { flex: 1; padding: 8px; border-radius: 8px; text-align: center; }
+    .stat-ontime { background: #dcfce7; color: #166534; font-weight: 600; font-size: 13px; }
+    .stat-late { background: #fee2e2; color: #991b1b; font-weight: 600; font-size: 13px; }
+
+    .alert { padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; line-height: 1.4; text-align: left; }
+    .success { background-color: #dcfce7; color: #166534; }
+    .error { background-color: #fee2e2; color: #991b1b; }
+    .credit { margin-top: 14px; padding-top: 10px; border-top: 1px dashed #e2e8f0; font-size: 12px; color: #64748b; }
+    .credit strong { color: #1e3a8a; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <span class="tag">THPT BÌNH THẠNH ĐÔNG</span>
+  <h2>ĐIỂM DANH ĐIỆN TỬ</h2>
+  <p class="sub" id="subTitle">Xác thực khuôn mặt & Chuyên cần</p>
+
+  <!-- Thẻ định danh tự động hiện ra từ lần 2 -->
+  <div id="profileBadge" class="profile-badge">
+    <button type="button" class="btn-reset-info" onclick="doiThongTin()">Đổi thông tin</button>
+    <div class="p-name" id="badgeName">Học sinh</div>
+    <div class="p-detail" id="badgeDetail">Lớp -- | CCCD: ********----</div>
+  </div>
+
+  <form id="attForm">
+    <!-- Vùng nhập thông tin lần đầu (Tự động ẩn ở lần 2) -->
+    <div id="inputSection">
+      <div class="field">
+        <label for="className">1. Lớp học (VD: 11A5, 10A1, 12A1):</label>
+        <input type="text" id="className" placeholder="Nhập tên lớp..." required>
+      </div>
+
+      <div class="field">
+        <label for="fullName">2. Họ và tên học sinh:</label>
+        <input type="text" id="fullName" placeholder="Nhập đầy đủ Họ và Tên..." required>
+      </div>
+
+      <div class="field">
+        <label for="cccdNumber">3. Số Căn cước công dân (Đủ 12 số):</label>
+        <input type="tel" id="cccdNumber" maxlength="12" placeholder="Nhập đúng 12 chữ số CCCD..." required inputmode="numeric">
+      </div>
+    </div>
+
+    <!-- Khung Live Camera -->
+    <div class="field">
+      <label>Ảnh chân dung trực tiếp:</label>
+      <div class="cam-box">
+        <video id="webcam" autoplay playsinline muted></video>
+        <img id="capturedPhoto" alt="Ảnh chụp">
+        <canvas id="photoCanvas" width="400" height="300"></canvas>
+      </div>
+
+      <div class="cam-ctrl">
+        <button type="button" id="btnSnap" class="btn-cam-action btn-snap" onclick="chupAnhNgay()">📸 Chụp Ảnh Ngay</button>
+        <button type="button" id="btnRetake" class="btn-cam-action btn-retake" onclick="chupLai()">🔄 Chụp Lại</button>
+      </div>
+    </div>
+
+    <button type="button" class="btn-submit" id="btnSubmit" onclick="guiDiemDanh()">Xác Nhận Điểm Danh</button>
+  </form>
+
+  <div id="msg" class="alert"></div>
+
+  <div class="credit">
+    Thiết kế hệ thống: <strong>NGUYỄN THẮM</strong>
+  </div>
+</div>
+
+<script>
+  // DÁN LINK APPS SCRIPT CỦA BẠN VÀO DÒNG DƯỚI ĐÂY:
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhp6FJEYI55GNEdX0P4K81lr2Tcqd6U1CGjfNVbsDcLwUPhDZEqUAtGF00Zhw1UgapeA/exec";
+
+  const TRUONG_LAT = 10.5372;
+  const TRUONG_LNG = 105.1524;
+
+  const video = document.getElementById("webcam");
+  const capturedPhoto = document.getElementById("capturedPhoto");
+  const canvas = document.getElementById("photoCanvas");
+  let streamGoc = null;
+  let finalBase64Image = "";
+
+  // Tạo và lưu mã máy (Device ID) duy nhất
+  function getDeviceId() {
+    let id = localStorage.getItem("btd_device_token");
+    if (!id) {
+      id = "DEV-" + Math.random().toString(36).substring(2, 8).toUpperCase() + "-" + Date.now().toString(36).toUpperCase();
+      localStorage.setItem("btd_device_token", id);
+    }
+    return id;
+  }
+  const myDeviceId = getDeviceId();
+
+  // Kiểm tra bộ nhớ: Đã có thông tin thì ẩn ô nhập
+  function kiemTraThongTinDaLuu() {
+    const savedClass = localStorage.getItem("btd_class");
+    const savedName = localStorage.getItem("btd_name");
+    const savedCCCD = localStorage.getItem("btd_cccd");
+
+    if (savedClass && savedName && savedCCCD) {
+      document.getElementById("inputSection").style.display = "none";
+      document.getElementById("profileBadge").style.display = "block";
+      document.getElementById("badgeName").innerText = savedName;
+      document.getElementById("badgeDetail").innerText = "Lớp: " + savedClass + " | CCCD: ********" + savedCCCD.slice(-4);
+      document.getElementById("subTitle").innerText = "Điểm danh 1 chạm - Đã khóa máy cố định";
+    }
+  }
+
+  function doiThongTin() {
+    if (confirm("Bạn có muốn đổi thông tin tài khoản trên điện thoại này?")) {
+      localStorage.removeItem("btd_class");
+      localStorage.removeItem("btd_name");
+      localStorage.removeItem("btd_cccd");
+      document.getElementById("inputSection").style.display = "block";
+      document.getElementById("profileBadge").style.display = "none";
+      document.getElementById("subTitle").innerText = "Xác thực khuôn mặt & Chuyên cần";
+    }
+  }
+
+  // Khởi động Camera trước
+  async function khoiDongCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    try {
+      streamGoc = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+      video.srcObject = streamGoc;
+      await video.play();
+    } catch (e) {
+      try {
+        streamGoc = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.srcObject = streamGoc;
+        await video.play();
+      } catch (err) {}
+    }
+  }
+
+  function chupAnhNgay() {
+    if (!streamGoc || video.videoWidth === 0) {
+      baoLoi("Camera chưa sẵn sàng, vui lòng chạm để mở!", false);
+      khoiDongCamera();
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    canvas.width = 400;
+    canvas.height = 300;
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    finalBase64Image = canvas.toDataURL("image/jpeg", 0.7);
+    capturedPhoto.src = finalBase64Image;
+    capturedPhoto.style.display = "block";
+    video.style.display = "none";
+
+    document.getElementById("btnSnap").style.display = "none";
+    document.getElementById("btnRetake").style.display = "block";
+    baoLoi("Đã chụp ảnh khuôn mặt! Hãy bấm 'Xác Nhận Điểm Danh'.", true);
+  }
+
+  function chupLai() {
+    finalBase64Image = "";
+    capturedPhoto.style.display = "none";
+    video.style.display = "block";
+    document.getElementById("btnSnap").style.display = "block";
+    document.getElementById("btnRetake").style.display = "none";
+    document.getElementById("msg").style.display = "none";
+  }
+
+  window.onload = function() {
+    kiemTraThongTinDaLuu();
+    khoiDongCamera();
+  };
+
+  function tinhKhoangCach(lat1, lon1, lat2, lon2) {
+    const R = 6371e3;
+    const rad = Math.PI / 180;
+    const dLat = (lat2 - lat1) * rad;
+    const dLon = (lon2 - lon1) * rad;
+    const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*rad)*Math.cos(lat2*rad)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+  }
+
+  function baoLoi(text, thanhCong) {
+    const msg = document.getElementById("msg");
+    msg.className = thanhCong ? "alert success" : "alert error";
+    msg.innerHTML = text;
+    msg.style.display = "block";
+  }
+
+  function guiDiemDanh() {
+    let className = localStorage.getItem("btd_class");
+    let fullName = localStorage.getItem("btd_name");
+    let cccdNumber = localStorage.getItem("btd_cccd");
+
+    if (!className || !fullName || !cccdNumber) {
+      className = document.getElementById("className").value.trim();
+      fullName = document.getElementById("fullName").value.trim();
+      cccdNumber = document.getElementById("cccdNumber").value.trim();
+
+      if (!className || !fullName || !cccdNumber) {
+        baoLoi("Vui lòng nhập đầy đủ Lớp, Họ Tên và Số CCCD!", false);
+        return;
+      }
+      if (cccdNumber.length !== 12 || isNaN(cccdNumber)) {
+        baoLoi("Số Căn cước công dân (CCCD) phải đủ 12 chữ số!", false);
+        return;
+      }
+    }
+
+    if (!finalBase64Image) {
+      baoLoi("Vui lòng bấm '📸 Chụp Ảnh Ngay' trước khi xác nhận!", false);
+      return;
+    }
+
+    const btn = document.getElementById("btnSubmit");
+    btn.disabled = true;
+    btn.innerText = "Đang kiểm tra vị trí & gửi...";
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const khoangCach = tinhKhoangCach(pos.coords.latitude, pos.coords.longitude, TRUONG_LAT, TRUONG_LNG);
+
+        fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            className: className,
+            fullName: fullName,
+            cccdNumber: cccdNumber,
+            deviceId: myDeviceId,
+            distance: khoangCach,
+            imageBase64: finalBase64Image
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.result === "success") {
+            localStorage.setItem("btd_class", className);
+            localStorage.setItem("btd_name", fullName);
+            localStorage.setItem("btd_cccd", cccdNumber);
+
+            baoLoi(`
+              <strong>Điểm danh thành công!</strong><br>
+              ${fullName} (${className})<br>
+              Trạng thái: <strong>${data.currentStatus}</strong><br>
+              <div class="stat-box">
+                <div class="stat-item stat-ontime">✓ Đúng giờ tuần: ${data.onTimeCount} buổi</div>
+                <div class="stat-item stat-late">⚠️ Trễ tuần này: ${data.lateCount} buổi</div>
+              </div>
+            `, true);
+
+            btn.innerText = "Đã hoàn thành";
+            kiemTraThongTinDaLuu();
+          } else {
+            baoLoi("<strong>Lỗi:</strong> " + data.message, false);
+            btn.disabled = false;
+            btn.innerText = "Xác Nhận Điểm Danh";
+          }
+        })
+        .catch(() => {
+          baoLoi("Lỗi kết nối mạng, vui lòng kiểm tra lại!", false);
+          btn.disabled = false;
+          btn.innerText = "Xác Nhận Điểm Danh";
+        });
+      },
+      (err) => {
+        baoLoi("Vui lòng BẬT ĐỊNH VỊ (GPS) để hoàn tất điểm danh.", false);
+        btn.disabled = false;
+        btn.innerText = "Xác Nhận Điểm Danh";
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+</script>
+
+</body>
+</html>
